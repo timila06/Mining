@@ -47,3 +47,12 @@ Date: 2026-07-13
 
 - [x] Major visual, navigation, console, and responsive checks passed.
 - [x] Ready for the next project step: push to GitHub and prepare deployment.
+
+## Live Authentication QA
+
+- [x] Manually created Supabase Auth user can log in on the live Vercel site.
+- [x] Profile row is created automatically and displayed on `/app/dashboard`.
+- [x] Session persists after browser refresh.
+- [x] Logout returns the user to the public homepage.
+- [x] Direct access to `/app/dashboard` while logged out redirects to `/login?next=%2Fapp%2Fdashboard`.
+- [x] Invalid login shows an error message.
