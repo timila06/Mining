@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/server";
+import { MissionSimulation } from "./MissionSimulation";
 
 type RiskLevel = "low" | "medium" | "high" | "critical" | "resolved";
 
@@ -55,6 +56,8 @@ export default async function DashboardPage() {
     readingsResult,
     missionsResult,
     reportsResult,
+    zonesResult,
+    sensorsResult,
   ] = await Promise.all([
     supabase.from("mine_sites").select("id, name, region, country, status").eq("name", "Operation MOLE Demo Mine").maybeSingle(),
     supabase.from("drones").select("id, name, drone_code, status, battery_percent, signal_percent").eq("drone_code", "MOLE-01").maybeSingle(),
@@ -85,6 +88,14 @@ export default async function DashboardPage() {
       .select("id, title, summary, generated_at")
       .order("generated_at", { ascending: false })
       .limit(2),
+    supabase
+      .from("mine_zones")
+      .select("id, code, name, status")
+      .order("code", { ascending: true }),
+    supabase
+      .from("drone_sensors")
+      .select("id, sensor_key, label, unit")
+      .order("sensor_key", { ascending: true }),
   ]);
 
   const databaseError =
@@ -94,7 +105,9 @@ export default async function DashboardPage() {
     alertsResult.error ||
     readingsResult.error ||
     missionsResult.error ||
-    reportsResult.error;
+    reportsResult.error ||
+    zonesResult.error ||
+    sensorsResult.error;
 
   const site = siteResult.data;
   const drone = droneResult.data;
@@ -103,6 +116,8 @@ export default async function DashboardPage() {
   const readings = readingsResult.data ?? [];
   const missions = missionsResult.data ?? [];
   const reports = reportsResult.data ?? [];
+  const zones = zonesResult.data ?? [];
+  const sensors = sensorsResult.data ?? [];
 
   return (
     <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
@@ -136,6 +151,14 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-6">
+            <MissionSimulation
+              userId={user.id}
+              mineSiteId={site.id}
+              droneId={drone.id}
+              zones={zones}
+              sensors={sensors}
+            />
+
             <div className="grid gap-4 lg:grid-cols-4">
               <article className="rounded-lg border border-stone-200 bg-white p-5 lg:col-span-2">
                 <p className="text-sm font-bold text-stone-500">Mine site</p>
