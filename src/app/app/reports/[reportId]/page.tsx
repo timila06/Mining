@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
 import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
-import { roleLabel } from "@/app/app/_components/permissions";
+import { canApproveSafety, roleLabel } from "@/app/app/_components/permissions";
+import { submitSafetyApproval } from "../actions";
 import { PrintButton } from "../PrintButton";
 
 function relationObject<T extends Record<string, unknown>>(relation: T | T[] | null | undefined) {
@@ -24,12 +25,15 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ r
       highest_severity,
       hazards_detected,
       final_entry_decision,
-      missions(id, mission_code, title, status, selected_scenario, started_at, completed_at, mine_sites(name))
+      report_status,
+      missions(id, mission_code, title, status, selected_scenario, started_at, completed_at, mine_sites(name)),
+      safety_approvals(decision, comments, conditions, corrective_actions, approved_at, profiles!safety_approvals_reviewed_by_fkey(full_name))
     `)
     .eq("id", reportId)
     .maybeSingle();
 
   const mission = relationObject(report?.missions);
+  const approval = relationObject(report?.safety_approvals);
   const missionId = typeof mission?.id === "string" ? mission.id : null;
   const [zonesResult, alertsResult] = await Promise.all([
     missionId
@@ -101,6 +105,16 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ r
             <article className="rounded-lg border border-stone-200 bg-white p-5">
               <p className="text-sm font-bold text-stone-500">Final entry decision</p>
               <p className="mt-2 text-2xl font-black">{report.final_entry_decision}</p>
+              <p className="mt-1 text-sm font-bold text-stone-500">Report status: {report.report_status}</p>
+              {approval ? (
+                <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                  <p className="font-black">Reviewed by {relationValue(approval.profiles, "full_name")} on {formatDate(approval.approved_at)}</p>
+                  <p className="mt-1">Decision: {approval.decision}</p>
+                  <p className="mt-1">Comments: {approval.comments}</p>
+                  {approval.conditions ? <p className="mt-1">Conditions: {approval.conditions}</p> : null}
+                  {approval.corrective_actions ? <p className="mt-1">Corrective actions: {approval.corrective_actions}</p> : null}
+                </div>
+              ) : null}
               <p className="mt-4 text-stone-700">{report.summary}</p>
               <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
                 This report contains simulated prototype data and is not a real mine safety clearance.
@@ -139,6 +153,49 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ r
               <Link className="mt-4 inline-flex rounded-md bg-emerald-700 px-3 py-2 text-sm font-bold text-white print:hidden" href={`/app/missions/${missionId}`}>
                 View Mission
               </Link>
+            </article>
+
+            <article className="rounded-lg border border-stone-200 bg-white p-5 print:hidden">
+              <p className="text-sm font-bold text-stone-500">Safety approval</p>
+              {mission?.status === "active" ? (
+                <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
+                  Approval is blocked until the mission is completed.
+                </p>
+              ) : !canApproveSafety(profile?.role) ? (
+                <p className="mt-2 rounded-md border border-stone-200 bg-stone-50 p-3 text-sm font-bold text-stone-700">
+                  Your role can view this decision but cannot approve or revise it.
+                </p>
+              ) : (
+                <form action={submitSafetyApproval} className="mt-4 grid gap-3">
+                  <input type="hidden" name="reportId" value={report.id} />
+                  <input type="hidden" name="missionId" value={missionId ?? ""} />
+                  <label className="text-sm font-bold text-stone-700">
+                    Final entry decision
+                    <select name="decision" required defaultValue={approval?.decision ?? report.final_entry_decision ?? "Do not enter"} className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2">
+                      <option>Safe to enter</option>
+                      <option>Conditional entry</option>
+                      <option>Restricted access</option>
+                      <option>Do not enter</option>
+                      <option>Emergency response required</option>
+                    </select>
+                  </label>
+                  <label className="text-sm font-bold text-stone-700">
+                    Safety comments
+                    <textarea name="comments" required defaultValue={approval?.comments ?? ""} className="mt-1 min-h-24 w-full rounded-md border border-stone-300 px-3 py-2" />
+                  </label>
+                  <label className="text-sm font-bold text-stone-700">
+                    Required corrective actions
+                    <textarea name="correctiveActions" defaultValue={approval?.corrective_actions ?? ""} className="mt-1 min-h-24 w-full rounded-md border border-stone-300 px-3 py-2" />
+                  </label>
+                  <label className="text-sm font-bold text-stone-700">
+                    Conditions for entry
+                    <textarea name="conditions" defaultValue={approval?.conditions ?? ""} className="mt-1 min-h-24 w-full rounded-md border border-stone-300 px-3 py-2" />
+                  </label>
+                  <button className="w-fit rounded-md bg-emerald-700 px-4 py-2 text-sm font-bold text-white">
+                    Submit approval
+                  </button>
+                </form>
+              )}
             </article>
           </>
         )}

@@ -3,6 +3,10 @@ import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
 import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
 import { roleLabel } from "@/app/app/_components/permissions";
 
+function relationObject<T extends Record<string, unknown>>(relation: T | T[] | null | undefined) {
+  return Array.isArray(relation) ? relation[0] : relation;
+}
+
 export default async function MissionDetailPage({ params }: { params: Promise<{ missionId: string }> }) {
   const { missionId } = await params;
   const { supabase, user, profile } = await getAuthedContext(`/app/missions/${missionId}`);
@@ -35,7 +39,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
       .order("created_at", { ascending: false }),
     supabase
       .from("reports")
-      .select("id, title, final_entry_decision, highest_severity, hazards_detected")
+      .select("id, title, final_entry_decision, highest_severity, hazards_detected, report_status, safety_approvals(decision, comments, conditions, approved_at, profiles!safety_approvals_reviewed_by_fkey(full_name))")
       .eq("mission_id", missionId)
       .order("generated_at", { ascending: false })
       .limit(1)
@@ -50,6 +54,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
   const databaseError =
     missionResult.error || zonesResult.error || readingsResult.error || eventsResult.error || alertsResult.error || reportResult.error || droneResult.error;
   const mission = missionResult.data;
+  const approval = relationObject(reportResult.data?.safety_approvals);
 
   return (
     <AppShell
@@ -153,6 +158,15 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
                   <div className="mt-4">
                     <p className="font-bold">{reportResult.data.title}</p>
                     <p className="mt-1 text-sm text-stone-600">{reportResult.data.final_entry_decision}</p>
+                    {approval ? (
+                      <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                        <p className="font-bold">Approved decision: {approval.decision}</p>
+                        <p className="mt-1">Reviewed by {relationValue(approval.profiles, "full_name")} on {formatDate(approval.approved_at)}</p>
+                        <p className="mt-1">{approval.comments}</p>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm font-bold text-amber-700">Awaiting safety approval</p>
+                    )}
                     <Link className="mt-4 inline-flex rounded-md bg-emerald-700 px-3 py-2 text-sm font-bold text-white" href={`/app/reports/${reportResult.data.id}`}>
                       View Report
                     </Link>
