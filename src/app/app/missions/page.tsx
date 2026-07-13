@@ -26,6 +26,7 @@ export default async function MissionsPage() {
       title="Mission history"
       eyebrow="Operation MOLE"
       userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      role={profile?.role}
     >
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {error ? (

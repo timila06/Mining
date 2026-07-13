@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { canManageAlerts } from "@/app/app/_components/permissions";
 
 type AlertStatus = "open" | "acknowledged" | "investigating" | "resolved" | "dismissed";
 
@@ -14,6 +15,11 @@ async function requireUser() {
 
   if (!user) {
     redirect("/login?next=/app/alerts");
+  }
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  if (!canManageAlerts(profile?.role)) {
+    return { supabase, user: null };
   }
 
   return { supabase, user };
@@ -34,6 +40,7 @@ export async function updateAlertStatus(formData: FormData) {
   }
 
   const { supabase, user } = await requireUser();
+  if (!user) return;
   const { data: existing } = await supabase
     .from("alerts")
     .select("id, mission_id, status")
@@ -85,6 +92,7 @@ export async function assignAlertToSelf(formData: FormData) {
   if (!alertId) return;
 
   const { supabase, user } = await requireUser();
+  if (!user) return;
   const { data: existing } = await supabase
     .from("alerts")
     .select("id, mission_id, status")

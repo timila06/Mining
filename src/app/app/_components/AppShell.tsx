@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/server";
+import { canManageSettings, canManageSites, canManageUsers } from "./permissions";
 
 export async function getAuthedContext(next: string) {
   const supabase = await createClient();
@@ -26,11 +27,13 @@ export function AppShell({
   title,
   eyebrow,
   userLabel,
+  role,
   children,
 }: {
   title: string;
   eyebrow: string;
   userLabel: string;
+  role?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -55,6 +58,21 @@ export function AppShell({
             <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/alerts">
               Alerts
             </Link>
+            {canManageSites(role) ? (
+              <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/sites">
+                Sites
+              </Link>
+            ) : null}
+            {canManageUsers(role) ? (
+              <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/users">
+                Users
+              </Link>
+            ) : null}
+            {canManageSettings(role) ? (
+              <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/settings">
+                Settings
+              </Link>
+            ) : null}
             <form action={signOut}>
               <button className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50">
                 Logout

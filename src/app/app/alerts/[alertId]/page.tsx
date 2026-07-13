@@ -48,6 +48,7 @@ export default async function AlertDetailPage({ params }: { params: Promise<{ al
       title={alert?.title ?? "Alert detail"}
       eyebrow="Alert management"
       userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      role={profile?.role}
     >
       <section className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
         {error ? (

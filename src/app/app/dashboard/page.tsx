@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
 import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
+import { canRunMissions, roleLabel } from "@/app/app/_components/permissions";
 import { MissionSimulation } from "./MissionSimulation";
 
 export default async function DashboardPage() {
@@ -81,7 +82,8 @@ export default async function DashboardPage() {
     <AppShell
       title="Operator dashboard"
       eyebrow="Operation MOLE"
-      userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      userLabel={`Signed in as ${profile?.full_name ?? user.email} (${roleLabel(profile?.role)})`}
+      role={profile?.role}
     >
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {databaseError ? (
@@ -96,13 +98,20 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <MissionSimulation
-              userId={user.id}
-              mineSiteId={site.id}
-              droneId={drone.id}
-              zones={zones}
-              sensors={sensors}
-            />
+            {canRunMissions(profile?.role) ? (
+              <MissionSimulation
+                userId={user.id}
+                mineSiteId={site.id}
+                droneId={drone.id}
+                zones={zones}
+                sensors={sensors}
+              />
+            ) : (
+              <article className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-800">
+                <p className="font-black">Read-only operational view</p>
+                <p className="mt-2 text-sm">Your role can review missions, alerts, and reports, but cannot start MOLE-01 mission runs.</p>
+              </article>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-4">
               <article className="rounded-lg border border-stone-200 bg-white p-5 lg:col-span-2">

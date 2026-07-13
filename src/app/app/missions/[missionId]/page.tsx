@@ -55,6 +55,7 @@ export default async function MissionDetailPage({ params }: { params: Promise<{ 
       title={mission?.mission_code ?? "Mission detail"}
       eyebrow="Mission history"
       userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      role={profile?.role}
     >
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         {databaseError ? (
