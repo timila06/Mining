@@ -22,7 +22,7 @@ export default async function AlertsPage({
       missions(id, mission_code),
       mine_zones(id, code, name),
       sensor_readings(reading_value, unit, drone_sensors(id, sensor_key, label, safe_min, safe_max)),
-      profiles(full_name)
+      profiles!alerts_assigned_to_fkey(full_name)
     `)
     .order("created_at", { ascending: false });
 
