@@ -29,6 +29,10 @@ export function canRunMissions(role?: string | null) {
   return role === "administrator" || role === "mine_operator" || role === "drone_operator";
 }
 
+export function canManageDroneMaintenance(role?: string | null) {
+  return role === "administrator" || role === "drone_operator";
+}
+
 export function canManageAlerts(role?: string | null) {
   return role === "administrator" || role === "mine_operator" || role === "safety_officer";
 }

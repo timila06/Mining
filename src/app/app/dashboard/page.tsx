@@ -19,7 +19,11 @@ export default async function DashboardPage() {
     sensorsResult,
   ] = await Promise.all([
     supabase.from("mine_sites").select("id, name, region, country, status").eq("name", "Operation MOLE Demo Mine").maybeSingle(),
-    supabase.from("drones").select("id, name, drone_code, status, battery_percent, signal_percent").eq("drone_code", "MOLE-01").maybeSingle(),
+    supabase
+      .from("drones")
+      .select("id, name, drone_code, status, battery_percent, signal_percent, battery_health, maintenance_required, preflight_passed_at")
+      .eq("drone_code", "MOLE-01")
+      .maybeSingle(),
     supabase
       .from("missions")
       .select("id, mission_code, title, status, risk_level, progress_percent, started_at")
@@ -53,7 +57,7 @@ export default async function DashboardPage() {
       .order("code", { ascending: true }),
     supabase
       .from("drone_sensors")
-      .select("id, sensor_key, label, unit")
+      .select("id, sensor_key, label, unit, status, last_diagnostic_result, next_calibration_due_at, required_for_mission")
       .order("sensor_key", { ascending: true }),
   ]);
 
@@ -77,6 +81,19 @@ export default async function DashboardPage() {
   const reports = reportsResult.data ?? [];
   const zones = zonesResult.data ?? [];
   const sensors = sensorsResult.data ?? [];
+  const now = new Date();
+  const launchBlockedReasons = [
+    ...(drone?.status === "offline" ? ["drone is offline"] : []),
+    ...(drone?.maintenance_required ? ["maintenance is required"] : []),
+    ...((drone?.battery_health ?? 100) < 70 ? ["battery health is below minimum"] : []),
+    ...(!drone?.preflight_passed_at ? ["pre-flight check has not passed"] : []),
+    ...sensors
+      .filter((sensor) => sensor.required_for_mission && (sensor.status === "failed" || sensor.last_diagnostic_result === "failed"))
+      .map((sensor) => `${sensor.label} has failed`),
+    ...sensors
+      .filter((sensor) => sensor.required_for_mission && sensor.next_calibration_due_at && new Date(sensor.next_calibration_due_at) < now)
+      .map((sensor) => `${sensor.label} calibration has expired`),
+  ];
 
   return (
     <AppShell
@@ -105,6 +122,7 @@ export default async function DashboardPage() {
                 droneId={drone.id}
                 zones={zones}
                 sensors={sensors}
+                launchBlockedReasons={launchBlockedReasons}
               />
             ) : (
               <article className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-800">

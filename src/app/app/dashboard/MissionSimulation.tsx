@@ -27,6 +27,7 @@ type MissionSimulationProps = {
   droneId: string;
   zones: DemoZone[];
   sensors: DemoSensor[];
+  launchBlockedReasons: string[];
 };
 
 type ScenarioStep = {
@@ -119,7 +120,7 @@ function severityForReading(reading: ScenarioStep["readings"][number], threshold
   return crossed ? (threshold.setting_value.severity_level ?? reading.severity) : "low";
 }
 
-export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors }: MissionSimulationProps) {
+export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors, launchBlockedReasons }: MissionSimulationProps) {
   const [isPending, startTransition] = useTransition();
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("Ready to start a persisted MOLE-01 mission.");
@@ -139,8 +140,51 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
   }
 
   function startMission() {
+    if (launchBlockedReasons.length > 0) {
+      setWarning(`Mission launch blocked: ${launchBlockedReasons.join("; ")}`);
+      setStatus("MOLE-01 is not ready for launch.");
+      return;
+    }
+
     startTransition(async () => {
       const supabase = createClient();
+      const [{ data: latestDrone }, { data: latestSensors }, { data: batterySetting }, { data: preflightSetting }] = await Promise.all([
+        supabase
+          .from("drones")
+          .select("status, battery_health, maintenance_required, preflight_passed_at")
+          .eq("id", droneId)
+          .maybeSingle(),
+        supabase
+          .from("drone_sensors")
+          .select("label, status, last_diagnostic_result, next_calibration_due_at, required_for_mission")
+          .eq("drone_id", droneId),
+        supabase.from("system_settings").select("setting_value").eq("setting_key", "threshold_minimum_battery_health").maybeSingle(),
+        supabase.from("system_settings").select("setting_value").eq("setting_key", "threshold_preflight_valid_hours").maybeSingle(),
+      ]);
+      const minimumBatteryHealth = Number((batterySetting?.setting_value as { value?: number } | null)?.value ?? 70);
+      const preflightHours = Number((preflightSetting?.setting_value as { value?: number } | null)?.value ?? 12);
+      const preflightExpired =
+        !latestDrone?.preflight_passed_at ||
+        Date.now() - new Date(latestDrone.preflight_passed_at).getTime() > preflightHours * 60 * 60 * 1000;
+      const freshBlocks = [
+        ...(latestDrone?.status === "offline" ? ["drone is offline"] : []),
+        ...(latestDrone?.maintenance_required ? ["maintenance is required"] : []),
+        ...((latestDrone?.battery_health ?? 100) < minimumBatteryHealth ? ["battery health is below minimum"] : []),
+        ...(preflightExpired ? ["pre-flight check has not passed"] : []),
+        ...((latestSensors ?? [])
+          .filter((sensor) => sensor.required_for_mission && (sensor.status === "failed" || sensor.last_diagnostic_result === "failed"))
+          .map((sensor) => `${sensor.label} has failed`)),
+        ...((latestSensors ?? [])
+          .filter((sensor) => sensor.required_for_mission && sensor.next_calibration_due_at && new Date(sensor.next_calibration_due_at).getTime() < Date.now())
+          .map((sensor) => `${sensor.label} calibration has expired`)),
+      ];
+
+      if (freshBlocks.length > 0) {
+        setWarning(`Mission launch blocked: ${freshBlocks.join("; ")}`);
+        setStatus("MOLE-01 is not ready for launch.");
+        return;
+      }
+
       const { data: thresholdRows } = await supabase
         .from("system_settings")
         .select("setting_key, setting_value")
@@ -319,7 +363,7 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
         <button
           type="button"
           onClick={startMission}
-          disabled={isPending || zones.length === 0 || sensors.length === 0}
+          disabled={isPending || zones.length === 0 || sensors.length === 0 || launchBlockedReasons.length > 0}
           className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-300"
         >
           {isPending ? <Save className="h-4 w-4" aria-hidden="true" /> : <Play className="h-4 w-4" aria-hidden="true" />}
@@ -339,6 +383,12 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
         <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
           <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{warning}</span>
+        </div>
+      ) : null}
+
+      {launchBlockedReasons.length > 0 ? (
+        <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
+          Mission launch blocked: {launchBlockedReasons.join("; ")}
         </div>
       ) : null}
 
