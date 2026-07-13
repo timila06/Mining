@@ -1,0 +1,146 @@
+import Link from "next/link";
+import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
+import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
+import { PrintButton } from "../PrintButton";
+
+function relationObject<T extends Record<string, unknown>>(relation: T | T[] | null | undefined) {
+  return Array.isArray(relation) ? relation[0] : relation;
+}
+
+export default async function ReportDetailPage({ params }: { params: Promise<{ reportId: string }> }) {
+  const { reportId } = await params;
+  const { supabase, user, profile } = await getAuthedContext(`/app/reports/${reportId}`);
+
+  const { data: report, error } = await supabase
+    .from("reports")
+    .select(`
+      id,
+      title,
+      summary,
+      recommendations,
+      generated_at,
+      zones_scanned,
+      highest_severity,
+      hazards_detected,
+      final_entry_decision,
+      missions(id, mission_code, title, status, selected_scenario, started_at, completed_at, mine_sites(name))
+    `)
+    .eq("id", reportId)
+    .maybeSingle();
+
+  const mission = relationObject(report?.missions);
+  const missionId = typeof mission?.id === "string" ? mission.id : null;
+  const [zonesResult, alertsResult] = await Promise.all([
+    missionId
+      ? supabase
+          .from("mission_zones")
+          .select("id, visit_order, status, mine_zones(code, name)")
+          .eq("mission_id", missionId)
+          .order("visit_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    missionId
+      ? supabase
+          .from("alerts")
+          .select("id, title, risk_level, status, mine_zones(code)")
+          .eq("mission_id", missionId)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const databaseError = error || zonesResult.error || alertsResult.error;
+
+  return (
+    <AppShell
+      title={report?.title ?? "Report detail"}
+      eyebrow="Reports"
+      userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+    >
+      <section className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 print:max-w-none print:bg-white">
+        {databaseError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-5 text-red-800">
+            <p className="font-black">Database error</p>
+            <p className="mt-2 text-sm">{databaseError.message}</p>
+          </div>
+        ) : !report ? (
+          <div className="rounded-lg border border-stone-200 bg-white p-5">
+            <p className="font-black">Invalid report ID</p>
+            <p className="mt-2 text-sm text-stone-600">This report does not exist or is not available to this account.</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-5 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-stone-500">Mission summary</p>
+                <h2 className="mt-2 text-3xl font-black">{report.title}</h2>
+                <p className="mt-2 text-sm text-stone-600">
+                  {relationValue(report.missions, "mission_code")} · {relationValue(report.missions, "selected_scenario")} · {formatDate(report.generated_at)}
+                </p>
+              </div>
+              <PrintButton />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <article className="rounded-lg border border-stone-200 bg-white p-5">
+                <p className="text-sm font-bold text-stone-500">Highest severity</p>
+                <span className={`mt-3 inline-flex rounded-md border px-3 py-1 text-sm font-bold ${riskClass(report.highest_severity)}`}>
+                  {report.highest_severity}
+                </span>
+              </article>
+              <article className="rounded-lg border border-stone-200 bg-white p-5">
+                <p className="text-sm font-bold text-stone-500">Hazards detected</p>
+                <p className="mt-2 text-3xl font-black">{report.hazards_detected}</p>
+              </article>
+              <article className="rounded-lg border border-stone-200 bg-white p-5">
+                <p className="text-sm font-bold text-stone-500">Zones scanned</p>
+                <p className="mt-2 text-3xl font-black">{report.zones_scanned}</p>
+              </article>
+            </div>
+
+            <article className="rounded-lg border border-stone-200 bg-white p-5">
+              <p className="text-sm font-bold text-stone-500">Final entry decision</p>
+              <p className="mt-2 text-2xl font-black">{report.final_entry_decision}</p>
+              <p className="mt-4 text-stone-700">{report.summary}</p>
+              <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-800">
+                This report contains simulated prototype data and is not a real mine safety clearance.
+              </p>
+            </article>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <article className="rounded-lg border border-stone-200 bg-white p-5">
+                <p className="text-sm font-bold text-stone-500">Inspected zones</p>
+                <div className="mt-4 space-y-3">
+                  {(zonesResult.data ?? []).map((zone) => (
+                    <div key={zone.id} className="rounded-md border border-stone-200 p-3">
+                      <p className="font-bold">{zone.visit_order}. {relationValue(zone.mine_zones, "code")} · {relationValue(zone.mine_zones, "name")}</p>
+                      <p className="mt-1 text-sm text-stone-600">{zone.status}</p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+              <article className="rounded-lg border border-stone-200 bg-white p-5">
+                <p className="text-sm font-bold text-stone-500">Hazard summary</p>
+                <div className="mt-4 space-y-3">
+                  {(alertsResult.data ?? []).map((alert) => (
+                    <div key={alert.id} className="rounded-md border border-stone-200 p-3">
+                      <span className={`rounded-md border px-2 py-0.5 text-xs font-bold ${riskClass(alert.risk_level)}`}>{alert.risk_level}</span>
+                      <p className="mt-2 font-bold">{alert.title}</p>
+                      <p className="text-sm text-stone-600">{relationValue(alert.mine_zones, "code")} · {alert.status}</p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </div>
+
+            <article className="rounded-lg border border-stone-200 bg-white p-5">
+              <p className="text-sm font-bold text-stone-500">Recommendations</p>
+              <p className="mt-2 text-stone-700">{report.recommendations ?? "No recommendations recorded."}</p>
+              <Link className="mt-4 inline-flex rounded-md bg-emerald-700 px-3 py-2 text-sm font-bold text-white print:hidden" href={`/app/missions/${missionId}`}>
+                View Mission
+              </Link>
+            </article>
+          </>
+        )}
+      </section>
+    </AppShell>
+  );
+}

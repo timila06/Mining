@@ -1,52 +1,10 @@
-import { redirect } from "next/navigation";
-import { signOut } from "@/app/auth/actions";
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
+import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
 import { MissionSimulation } from "./MissionSimulation";
 
-type RiskLevel = "low" | "medium" | "high" | "critical" | "resolved";
-
-const riskStyles: Record<RiskLevel, string> = {
-  low: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  medium: "bg-amber-50 text-amber-800 border-amber-200",
-  high: "bg-orange-50 text-orange-800 border-orange-200",
-  critical: "bg-red-50 text-red-700 border-red-200",
-  resolved: "bg-stone-50 text-stone-600 border-stone-200",
-};
-
-function formatDate(value: string | null) {
-  if (!value) return "Not started";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-
-function riskClass(level?: string | null) {
-  return riskStyles[(level as RiskLevel) ?? "low"] ?? riskStyles.low;
-}
-
-function relationValue<T extends Record<string, unknown>>(relation: T | T[] | null | undefined, key: keyof T) {
-  const item = Array.isArray(relation) ? relation[0] : relation;
-  return item?.[key] ? String(item[key]) : "Unknown";
-}
-
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login?next=/app/dashboard");
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role, organization")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { supabase, user, profile } = await getAuthedContext("/app/dashboard");
 
   const [
     siteResult,
@@ -120,24 +78,11 @@ export default async function DashboardPage() {
   const sensors = sensorsResult.data ?? [];
 
   return (
-    <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
-      <nav className="border-b border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-emerald-700">Operation MOLE</p>
-            <h1 className="text-2xl font-black">Operator dashboard</h1>
-            <p className="text-sm text-stone-600">
-              Signed in as {profile?.full_name ?? user.email} {profile?.role ? `(${profile.role})` : ""}
-            </p>
-          </div>
-          <form action={signOut}>
-            <button className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50">
-              Logout
-            </button>
-          </form>
-        </div>
-      </nav>
-
+    <AppShell
+      title="Operator dashboard"
+      eyebrow="Operation MOLE"
+      userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+    >
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {databaseError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-5 text-red-800">
@@ -249,7 +194,12 @@ export default async function DashboardPage() {
               </article>
 
               <article className="rounded-lg border border-stone-200 bg-white p-5">
-                <p className="text-sm font-bold text-stone-500">Recent reports</p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold text-stone-500">Recent reports</p>
+                  <Link className="text-sm font-bold text-emerald-700" href="/app/reports">
+                    View all
+                  </Link>
+                </div>
                 <div className="mt-4 space-y-4">
                   {reports.length === 0 ? (
                     <p className="text-sm text-stone-600">No reports found.</p>
@@ -267,7 +217,12 @@ export default async function DashboardPage() {
             </div>
 
             <article className="rounded-lg border border-stone-200 bg-white p-5">
-              <p className="text-sm font-bold text-stone-500">Recent missions</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-bold text-stone-500">Recent missions</p>
+                <Link className="text-sm font-bold text-emerald-700" href="/app/missions">
+                  View all
+                </Link>
+              </div>
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-[680px] text-left text-sm">
                   <thead className="border-b border-stone-200 text-stone-500">
@@ -300,6 +255,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
-    </main>
+    </AppShell>
   );
 }
