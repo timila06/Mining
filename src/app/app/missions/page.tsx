@@ -78,9 +78,14 @@ export default async function MissionsPage() {
                       </td>
                       <td className="py-3 pr-4">{report?.final_entry_decision ?? "Pending report"}</td>
                       <td className="py-3">
-                        <Link className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-bold text-white" href={`/app/missions/${mission.id}`}>
-                          View Mission
-                        </Link>
+                        <div className="flex gap-2">
+                          <Link className="rounded-md bg-emerald-700 px-3 py-2 text-xs font-bold text-white" href={`/app/missions/${mission.id}`}>
+                            View
+                          </Link>
+                          <Link className="rounded-md border border-stone-300 px-3 py-2 text-xs font-bold text-stone-700" href={`/app/live-mission/${mission.id}`}>
+                            Live
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );

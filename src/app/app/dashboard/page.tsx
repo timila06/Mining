@@ -162,9 +162,14 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                   {activeMission?.risk_level ? (
-                    <span className={`w-fit rounded-md border px-3 py-1 text-sm font-bold ${riskClass(activeMission.risk_level)}`}>
-                      {activeMission.risk_level}
-                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`w-fit rounded-md border px-3 py-1 text-sm font-bold ${riskClass(activeMission.risk_level)}`}>
+                        {activeMission.risk_level}
+                      </span>
+                      <Link className="rounded-md border border-stone-300 px-3 py-1 text-sm font-bold text-stone-700" href={`/app/live-mission/${activeMission.id}`}>
+                        Live telemetry
+                      </Link>
+                    </div>
                   ) : null}
                 </div>
                 <div className="mt-5 h-3 overflow-hidden rounded-full bg-stone-100">
