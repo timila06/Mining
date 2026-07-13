@@ -117,7 +117,7 @@ export default function Home() {
             <a href="#reports">Reports</a>
           </div>
           <a
-            href="#login"
+            href="/login"
             className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-800"
           >
             <Lock className="h-4 w-4" aria-hidden="true" />
@@ -380,14 +380,18 @@ export default function Home() {
           </article>
           <article id="login" className="rounded-lg border border-stone-200 bg-stone-950 p-5 text-white">
             <h2 className="text-2xl font-black">Operator login</h2>
-            <p className="mt-2 text-stone-300">Mock authentication screen for Administrator, Mine Operator, Safety Officer, Drone Operator, or Regulator roles.</p>
-            <div className="mt-5 grid gap-3">
-              <input className="rounded-md border border-white/15 bg-white/10 px-4 py-3 text-white outline-none" placeholder="name@mine.example" />
-              <input className="rounded-md border border-white/15 bg-white/10 px-4 py-3 text-white outline-none" placeholder="Password" type="password" />
-              <button className="rounded-md bg-emerald-500 px-4 py-3 font-black text-stone-950">Enter dashboard</button>
-            </div>
+            <p className="mt-2 text-stone-300">
+              Real Supabase authentication is now used for Administrator, Mine Operator, Safety Officer, Drone Operator,
+              and Regulator roles.
+            </p>
+            <a
+              className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-emerald-500 px-4 py-3 font-black text-stone-950"
+              href="/login"
+            >
+              Open secure login
+            </a>
             <p className="mt-4 text-xs leading-5 text-stone-400">
-              Supabase authentication and stored records are planned for the next backend step after this front-end prototype is approved.
+              Public registration is disabled. Test operators are created manually in Supabase Authentication.
             </p>
           </article>
         </div>
