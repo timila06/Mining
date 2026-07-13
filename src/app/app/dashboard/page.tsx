@@ -147,7 +147,12 @@ export default async function DashboardPage() {
               </article>
 
               <article className="rounded-lg border border-stone-200 bg-white p-5">
-                <p className="text-sm font-bold text-stone-500">Recent alerts</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-stone-500">Recent alerts</p>
+                    <Link className="text-sm font-bold text-emerald-700" href="/app/alerts">
+                      Manage all
+                    </Link>
+                  </div>
                 <div className="mt-4 space-y-3">
                   {alerts.length === 0 ? (
                     <p className="text-sm text-stone-600">No alerts found.</p>
