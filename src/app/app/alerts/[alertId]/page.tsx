@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
 import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
+import { roleLabel } from "@/app/app/_components/permissions";
 import { assignAlertToSelf, updateAlertStatus } from "../actions";
 
 function relationObject<T extends Record<string, unknown>>(relation: T | T[] | null | undefined) {
@@ -47,7 +48,7 @@ export default async function AlertDetailPage({ params }: { params: Promise<{ al
     <AppShell
       title={alert?.title ?? "Alert detail"}
       eyebrow="Alert management"
-      userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      userLabel={`Signed in as ${profile?.full_name ?? user.email} (${roleLabel(profile?.role)})`}
       role={profile?.role}
     >
       <section className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
@@ -161,3 +162,4 @@ export default async function AlertDetailPage({ params }: { params: Promise<{ al
     </AppShell>
   );
 }
+

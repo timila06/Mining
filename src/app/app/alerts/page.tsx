@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
 import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
+import { roleLabel } from "@/app/app/_components/permissions";
 
 export default async function AlertsPage({
   searchParams,
@@ -58,7 +59,7 @@ export default async function AlertsPage({
     <AppShell
       title="Alert management"
       eyebrow="Operation MOLE"
-      userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      userLabel={`Signed in as ${profile?.full_name ?? user.email} (${roleLabel(profile?.role)})`}
       role={profile?.role}
     >
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
@@ -150,3 +151,4 @@ export default async function AlertsPage({
     </AppShell>
   );
 }
+

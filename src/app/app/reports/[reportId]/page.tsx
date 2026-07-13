@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell, getAuthedContext } from "@/app/app/_components/AppShell";
 import { formatDate, relationValue, riskClass } from "@/app/app/_components/format";
+import { roleLabel } from "@/app/app/_components/permissions";
 import { PrintButton } from "../PrintButton";
 
 function relationObject<T extends Record<string, unknown>>(relation: T | T[] | null | undefined) {
@@ -53,7 +54,7 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ r
     <AppShell
       title={report?.title ?? "Report detail"}
       eyebrow="Reports"
-      userLabel={`Signed in as ${profile?.full_name ?? user.email} ${profile?.role ? `(${profile.role})` : ""}`}
+      userLabel={`Signed in as ${profile?.full_name ?? user.email} (${roleLabel(profile?.role)})`}
       role={profile?.role}
     >
       <section className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 print:max-w-none print:bg-white">
@@ -145,3 +146,4 @@ export default async function ReportDetailPage({ params }: { params: Promise<{ r
     </AppShell>
   );
 }
+
