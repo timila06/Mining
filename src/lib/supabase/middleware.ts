@@ -36,6 +36,24 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
+  if (isProtectedRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.account_status === "suspended" || profile?.account_status === "inactive") {
+      await supabase.auth.signOut();
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("error", profile.account_status === "suspended" ? "Account suspended" : "Account inactive");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    await supabase.from("profiles").update({ last_login: new Date().toISOString() }).eq("id", user.id);
+  }
+
   if (isAuthRoute && user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/app/dashboard";
