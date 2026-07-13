@@ -48,22 +48,34 @@ export async function submitSafetyApproval(formData: FormData) {
   if (!report || report.mission_id !== missionId || mission?.status === "active") return;
 
   const now = new Date().toISOString();
-  await supabase.from("safety_approvals").upsert(
-    {
-      report_id: reportId,
-      mission_id: missionId,
-      reviewed_by: user.id,
-      approved_by: user.id,
-      status: decision === "Safe to enter" || decision === "Conditional entry" ? "approved" : "denied",
-      decision,
-      comments,
-      corrective_actions: correctiveActions,
-      conditions,
-      decision_notes: comments,
-      approved_at: now,
-    },
-    { onConflict: "report_id" },
-  );
+  const approvalPayload = {
+    report_id: reportId,
+    mission_id: missionId,
+    reviewed_by: user.id,
+    approved_by: user.id,
+    status: decision === "Safe to enter" || decision === "Conditional entry" ? "approved" : "denied",
+    decision,
+    comments,
+    corrective_actions: correctiveActions,
+    conditions,
+    decision_notes: comments,
+    approved_at: now,
+  };
+
+  const { data: existingApproval } = await supabase
+    .from("safety_approvals")
+    .select("id")
+    .eq("report_id", reportId)
+    .maybeSingle();
+
+  const approvalResult = existingApproval
+    ? await supabase.from("safety_approvals").update(approvalPayload).eq("id", existingApproval.id)
+    : await supabase.from("safety_approvals").insert(approvalPayload);
+
+  if (approvalResult.error) {
+    console.error("Safety approval save failed", approvalResult.error.message);
+    return;
+  }
 
   await supabase
     .from("reports")
