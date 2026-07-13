@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
 import { createClient } from "@/lib/supabase/server";
 import { canManageSettings, canManageSites, canManageUsers } from "./permissions";
+import { NotificationBell } from "./NotificationBell";
 
 export async function getAuthedContext(next: string) {
   const supabase = await createClient();
@@ -61,6 +62,7 @@ export function AppShell({
             <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/drone">
               Drone
             </Link>
+            <NotificationBell />
             {canManageSites(role) ? (
               <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/sites">
                 Sites
