@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Operation MOLE
 
-## Getting Started
+Operation MOLE, or Mining Operation Lethality Explorer, is a Next.js prototype for underground mine inspection and safety decision support.
 
-First, run the development server:
+Live site: https://mining-three-jet.vercel.app
+
+## Prototype Scope
+
+- Public landing section for Diversity Hires and Operation MOLE.
+- One long-range underground inspection drone model.
+- Simulated operations dashboard.
+- Hazard charts for gas, oxygen, methane, and dust trends.
+- Sensor threshold cards.
+- Underground tunnel map mockup.
+- Alerts, mission history, reports table, and mock operator login.
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## QA
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Local QA results are recorded in `QA-CHECKLIST.md`.
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The project is connected to Vercel from the GitHub repository `timila06/Mining`.
+Pushes to the `main` branch trigger production deployments.
