@@ -39,6 +39,16 @@ type ScenarioStep = {
   }>;
 };
 
+type ThresholdSetting = {
+  setting_key: string;
+  setting_value: {
+    value?: number;
+    severity_level?: RiskLevel;
+    sensor_key?: string;
+    comparison?: "gt" | "lt";
+  };
+};
+
 type WriteResult<T> = {
   data: T | null;
   error: { message: string } | null;
@@ -100,6 +110,15 @@ function decisionFor(severity: RiskLevel) {
   return "Cleared for controlled entry";
 }
 
+function severityForReading(reading: ScenarioStep["readings"][number], thresholds: ThresholdSetting[]) {
+  const threshold = thresholds.find((item) => item.setting_value?.sensor_key === reading.sensorKey);
+  if (!threshold || typeof threshold.setting_value.value !== "number") return reading.severity;
+
+  const comparison = threshold.setting_value.comparison ?? "gt";
+  const crossed = comparison === "lt" ? reading.value < threshold.setting_value.value : reading.value > threshold.setting_value.value;
+  return crossed ? (threshold.setting_value.severity_level ?? reading.severity) : "low";
+}
+
 export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors }: MissionSimulationProps) {
   const [isPending, startTransition] = useTransition();
   const [progress, setProgress] = useState(0);
@@ -122,6 +141,11 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
   function startMission() {
     startTransition(async () => {
       const supabase = createClient();
+      const { data: thresholdRows } = await supabase
+        .from("system_settings")
+        .select("setting_key, setting_value")
+        .like("setting_key", "threshold_%");
+      const thresholds = (thresholdRows ?? []) as ThresholdSetting[];
       const code = `MOLE-RUN-${new Date().toISOString().replace(/\D/g, "").slice(0, 14)}`;
       setMissionCode(code);
       setProgress(0);
@@ -187,7 +211,8 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
           const sensor = sensorByKey.get(reading.sensorKey);
           if (!sensor) continue;
 
-          highestSeverity = strongest(highestSeverity, reading.severity);
+          const computedSeverity = severityForReading(reading, thresholds);
+          highestSeverity = strongest(highestSeverity, computedSeverity);
 
           const savedReading = await safeWrite<{ id: string }>(
             supabase
@@ -198,7 +223,7 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
                 mine_zone_id: zone.id,
                 reading_value: reading.value,
                 unit: sensor.unit,
-                risk_level: reading.severity,
+                risk_level: computedSeverity,
                 recorded_at: new Date().toISOString(),
                 simulated: true,
               })
@@ -206,9 +231,9 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
               .single(),
           );
 
-          if (reading.severity === "high" || reading.severity === "critical") {
+          if (computedSeverity === "high" || computedSeverity === "critical") {
             hazardsDetected += 1;
-            const title = `${sensor.label} ${reading.severity} in ${zone.code}`;
+            const title = `${sensor.label} ${computedSeverity} in ${zone.code}`;
             const existingAlert = await safeWrite<{ id: string; risk_level: RiskLevel }>(
               supabase
                 .from("alerts")
@@ -219,7 +244,7 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
                 .maybeSingle(),
             );
 
-            if (!existingAlert || existingAlert.risk_level !== reading.severity) {
+            if (!existingAlert || existingAlert.risk_level !== computedSeverity) {
               await safeWrite(
                 supabase.from("alerts").insert({
                   mission_id: mission.id,
@@ -227,7 +252,7 @@ export function MissionSimulation({ userId, mineSiteId, droneId, zones, sensors 
                   sensor_reading_id: savedReading?.id ?? null,
                   title,
                   description: `${sensor.label} reached ${reading.value} ${sensor.unit} during the simulated MOLE-01 mission.`,
-                  risk_level: reading.severity,
+                  risk_level: computedSeverity,
                   status: "open",
                 }),
               );
