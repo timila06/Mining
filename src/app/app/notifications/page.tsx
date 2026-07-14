@@ -14,6 +14,10 @@ type SearchParams = {
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const { supabase, user, profile } = await getAuthedContext("/app/notifications");
+  const [missionsResult, sitesResult] = await Promise.all([
+    supabase.from("missions").select("id, mission_code, mine_site_id").order("started_at", { ascending: false }).limit(30),
+    supabase.from("mine_sites").select("id, name").order("name"),
+  ]);
 
   let query = supabase
     .from("notifications")
@@ -25,13 +29,15 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   if (params.unread === "true") query = query.is("read_at", null);
   if (params.severity) query = query.eq("severity", params.severity);
   if (params.mission) query = query.eq("mission_id", params.mission);
+  if (params.site) {
+    const missionIdsForSite = (missionsResult.data ?? []).filter((mission) => mission.mine_site_id === params.site).map((mission) => mission.id);
+    query = missionIdsForSite.length ? query.in("mission_id", missionIdsForSite) : query.eq("mission_id", "00000000-0000-0000-0000-000000000000");
+  }
   if (params.date) query = query.gte("created_at", `${params.date}T00:00:00`).lte("created_at", `${params.date}T23:59:59`);
 
-  const [notificationsResult, prefsResult, missionsResult, sitesResult] = await Promise.all([
+  const [notificationsResult, prefsResult] = await Promise.all([
     query,
     supabase.from("notification_preferences").select("*").eq("user_id", user.id).maybeSingle(),
-    supabase.from("missions").select("id, mission_code").order("started_at", { ascending: false }).limit(30),
-    supabase.from("mine_sites").select("id, name").order("name"),
   ]);
 
   const prefs = prefsResult.data;

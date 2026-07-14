@@ -9,15 +9,22 @@ export async function NotificationBell() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: notifications } = await supabase
+  const [{ data: notifications }, { count }] = await Promise.all([
+    supabase
     .from("notifications")
     .select("id, title, severity, created_at, read_at")
     .eq("user_id", user.id)
     .is("read_at", null)
     .order("created_at", { ascending: false })
-    .limit(3);
+      .limit(3),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("read_at", null),
+  ]);
 
-  const unread = notifications?.length ?? 0;
+  const unread = count ?? 0;
 
   return (
     <Link className="rounded-md border border-stone-300 px-3 py-2 text-sm font-bold text-stone-700 hover:bg-stone-50" href="/app/notifications">
