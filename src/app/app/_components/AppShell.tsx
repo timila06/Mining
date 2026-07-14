@@ -87,6 +87,9 @@ export function AppShell({
         </div>
       </nav>
       {children}
+      <footer className="border-t border-stone-200 bg-white px-4 py-4 text-center text-xs font-bold text-stone-500 print:hidden">
+        Operation MOLE is a student prototype. Drone telemetry, sensor readings, hazard detection, and mission behavior are simulated and are not certified for real-world safety decisions.
+      </footer>
     </main>
   );
 }

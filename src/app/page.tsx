@@ -400,7 +400,7 @@ export default function Home() {
       <footer className="border-t border-stone-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm text-stone-600 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>Operation MOLE by Diversity Hires. B2B Drone-as-a-Service / Inspection-as-a-Service prototype.</p>
-          <p>Built for Thailand underground mine safety planning.</p>
+          <p>Student prototype. Simulated data only; not certified for real-world safety decisions.</p>
         </div>
       </footer>
     </main>
